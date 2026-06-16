@@ -28,6 +28,11 @@ NeighborNest started as a real problem: *"I live in Corbett Landing, a new commu
 
 ---
 
+> 📘 **Full project dossier** — the complete story (problem, vision, naming,
+> validation plan, architecture, deployment options & costs, an honest success
+> assessment, and the security review) lives in
+> [`docs/PROJECT_OVERVIEW.md`](docs/PROJECT_OVERVIEW.md).
+
 ## Tech stack
 
 | Layer    | Tech                                                        |
