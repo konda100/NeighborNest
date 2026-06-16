@@ -106,6 +106,23 @@ Other seeded neighbors all use the password `password123` (e.g. `priya@corbett.t
 
 ---
 
+## Testing
+
+The backend has an integration test suite (**Vitest + Supertest**) that exercises
+the core features against an isolated SQLite test database (`server/test.db`),
+re-seeded before each test:
+
+```bash
+npm test                 # from the repo root
+# or
+cd server && npm test
+```
+
+Covered: auth (register/login/me/profile + validation), the directory's
+neighbor-scoped social-proof stats and scope widening (neighborhood → city),
+recommendation create/upsert, group-deal commitments + critical-mass + savings
+math + organizer permissions, Q&A posts/replies, and dashboard stats — **28 tests**.
+
 ## Data model
 
 - **Geography:** `State → County → City → Neighborhood` (each user belongs to a neighborhood).

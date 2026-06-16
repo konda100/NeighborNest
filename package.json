@@ -11,6 +11,7 @@
     "dev:server": "npm run ensure-env && npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev",
     "build": "npm --prefix server run build && npm --prefix client run build",
-    "seed": "npm run ensure-env && npm --prefix server run db:reset"
+    "seed": "npm run ensure-env && npm --prefix server run db:reset",
+    "test": "npm --prefix server test"
   }
 }

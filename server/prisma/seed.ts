@@ -2,8 +2,6 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
-
 function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -22,9 +20,7 @@ const CATEGORIES = [
   { name: "House cleaning", icon: "🧹", description: "Interior cleaning services" },
 ];
 
-async function main() {
-  console.log("Seeding NeighborNest...");
-
+export async function seed(prisma: PrismaClient) {
   // --- Geography ---------------------------------------------------------
   const nc = await prisma.state.create({ data: { name: "North Carolina", code: "NC" } });
   const chatham = await prisma.county.create({ data: { name: "Chatham", stateId: nc.id } });
@@ -354,14 +350,22 @@ async function main() {
     },
   });
 
-  console.log("Seed complete.");
-  console.log("Login with: alex@corbett.test / password123 (admin)");
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+// Run directly via `npm run seed` / `tsx prisma/seed.ts`.
+const isDirectRun = process.argv[1]?.includes("seed");
+if (isDirectRun) {
+  const prisma = new PrismaClient();
+  console.log("Seeding NeighborNest...");
+  seed(prisma)
+    .then(async () => {
+      console.log("Seed complete.");
+      console.log("Login with: alex@corbett.test / password123 (admin)");
+      await prisma.$disconnect();
+    })
+    .catch(async (e) => {
+      console.error(e);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}
