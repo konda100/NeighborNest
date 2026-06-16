@@ -1,0 +1,238 @@
+// NeighborNest data model
+// A community-first home services hub organized by micro-geography
+// (neighborhood -> city -> county -> state) with neighbor recommendations
+// and neighborhood group-buying deals.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Geography hierarchy: State > County > City > Neighborhood
+// ---------------------------------------------------------------------------
+
+model State {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique // e.g. "NC"
+  counties  County[]
+  createdAt DateTime @default(now())
+}
+
+model County {
+  id        String       @id @default(cuid())
+  name      String
+  state     State        @relation(fields: [stateId], references: [id])
+  stateId   String
+  cities    City[]
+  createdAt DateTime     @default(now())
+
+  @@unique([name, stateId])
+}
+
+model City {
+  id        String          @id @default(cuid())
+  name      String
+  county    County          @relation(fields: [countyId], references: [id])
+  countyId  String
+  neighborhoods Neighborhood[]
+  createdAt DateTime        @default(now())
+
+  @@unique([name, countyId])
+}
+
+model Neighborhood {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  city        City     @relation(fields: [cityId], references: [id])
+  cityId      String
+  zip         String?
+  // Rough number of occupied homes (used for group-deal critical mass math)
+  homeCount   Int      @default(0)
+
+  users           User[]
+  recommendations Recommendation[]
+  groupDeals      GroupDeal[]
+  askPosts        AskPost[]
+  createdAt       DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Users (homeowners) — onboarded via address into a neighborhood
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  streetAddress  String?
+  role           String   @default("resident") // resident | admin
+  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+  neighborhoodId String?
+
+  recommendations Recommendation[]
+  bookmarks       Bookmark[]
+  commitments     GroupDealCommitment[]
+  organizedDeals  GroupDeal[]            @relation("DealOrganizer")
+  askPosts        AskPost[]
+  askReplies      AskReply[]
+  createdAt       DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Service categories & providers
+// ---------------------------------------------------------------------------
+
+model ServiceCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  icon        String?  // emoji or icon key
+  description String?
+
+  recommendations Recommendation[]
+  groupDeals      GroupDeal[]
+  providers       ProviderCategory[]
+  createdAt       DateTime @default(now())
+}
+
+model Provider {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String?
+  website     String?
+  email       String?
+  description String?
+  serviceArea String?  // free text describing service area
+  verified    Boolean  @default(false)
+
+  categories      ProviderCategory[]
+  recommendations Recommendation[]
+  bookmarks       Bookmark[]
+  groupDeals      GroupDeal[]
+  createdAt       DateTime @default(now())
+}
+
+model ProviderCategory {
+  provider   Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+
+  @@id([providerId, categoryId])
+}
+
+// ---------------------------------------------------------------------------
+// Recommendations (neighbor-submitted reviews / "who I actually use")
+// ---------------------------------------------------------------------------
+
+model Recommendation {
+  id             String          @id @default(cuid())
+  provider       Provider        @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId     String
+  category       ServiceCategory @relation(fields: [categoryId], references: [id])
+  categoryId     String
+  author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       String
+  neighborhood   Neighborhood    @relation(fields: [neighborhoodId], references: [id])
+  neighborhoodId String
+
+  rating          Int      // 1-5
+  recommend       Boolean  @default(true)
+  timesUsed       String?  // "1", "2-3", "4+"
+  pricePaid       String?  // free text e.g. "$180 for 2-story gutters"
+  comment         String?
+  groupInterest   Boolean  @default(false)
+  groupTargetDate String?  // e.g. "Fall 2026"
+
+  createdAt DateTime @default(now())
+
+  @@unique([authorId, providerId, categoryId])
+}
+
+model Bookmark {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, providerId])
+}
+
+// ---------------------------------------------------------------------------
+// Group deals (neighborhood group-buying for recurring services)
+// ---------------------------------------------------------------------------
+
+model GroupDeal {
+  id             String          @id @default(cuid())
+  title          String
+  category       ServiceCategory @relation(fields: [categoryId], references: [id])
+  categoryId     String
+  neighborhood   Neighborhood    @relation(fields: [neighborhoodId], references: [id])
+  neighborhoodId String
+  organizer      User            @relation("DealOrganizer", fields: [organizerId], references: [id])
+  organizerId    String
+
+  description     String?
+  targetDate      String?  // e.g. "Fall 2026"
+  minHomes        Int      @default(6)  // critical mass needed to trigger the deal
+  soloPrice       Int?     // typical solo price per home (dollars)
+  groupPrice      Int?     // negotiated group price per home (dollars)
+
+  // Selected provider for the deal (optional until negotiated)
+  provider   Provider? @relation(fields: [providerId], references: [id])
+  providerId String?
+
+  status      String   @default("collecting") // collecting | negotiating | confirmed | completed | cancelled
+
+  commitments GroupDealCommitment[]
+  createdAt   DateTime @default(now())
+}
+
+model GroupDealCommitment {
+  id          String    @id @default(cuid())
+  deal        GroupDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  createdAt   DateTime  @default(now())
+
+  @@unique([dealId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Community Q&A ("ask neighbors") — persistent & searchable
+// ---------------------------------------------------------------------------
+
+model AskPost {
+  id             String       @id @default(cuid())
+  title          String
+  body           String?
+  neighborhood   Neighborhood @relation(fields: [neighborhoodId], references: [id])
+  neighborhoodId String
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       String
+
+  replies   AskReply[]
+  createdAt DateTime @default(now())
+}
+
+model AskReply {
+  id        String   @id @default(cuid())
+  post      AskPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+}

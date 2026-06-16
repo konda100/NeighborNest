@@ -1,0 +1,17 @@
+{
+  "name": "neighbornest",
+  "version": "1.0.0",
+  "description": "NeighborNest — your neighborhood's home services hub (directory + group deals)",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "ensure-env": "node scripts/ensure-env.mjs",
+    "setup": "npm run install:all && npm run ensure-env && npm --prefix server run db:reset",
+    "dev:server": "npm run ensure-env && npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "seed": "npm run ensure-env && npm --prefix server run db:reset",
+    "test": "npm --prefix server test"
+  }
+}
