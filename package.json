@@ -1,0 +1,15 @@
+{
+  "name": "neighbornest",
+  "version": "1.0.0",
+  "description": "NeighborNest — your neighborhood's home services hub (directory + group deals)",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "setup": "npm run install:all && npm --prefix server run db:reset",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "seed": "npm --prefix server run db:reset"
+  }
+}
