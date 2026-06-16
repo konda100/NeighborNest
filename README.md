@@ -54,19 +54,38 @@ Monorepo layout:
 
 Requires **Node.js 18+** (built and tested on Node 22).
 
-### 1. Backend
+### Quick start (recommended)
+
+From the repo root:
 
 ```bash
-cd server
-npm install
-cp .env.example .env          # adjust if needed
-npm run db:reset              # creates SQLite db + seeds demo data
-npm run dev                   # http://localhost:4000
+npm run setup        # installs both apps, creates server/.env, seeds the DB
 ```
 
-### 2. Frontend
+Then start each app in its own terminal:
 
 ```bash
+npm run dev:server   # http://localhost:4000
+npm run dev:client   # http://localhost:5173 (proxies /api -> :4000)
+```
+
+Open http://localhost:5173.
+
+> `npm run setup` auto-creates `server/.env` from `server/.env.example` (the
+> `.env` file is gitignored, so a fresh clone won't have one). To create it
+> manually instead — Windows PowerShell: `Copy-Item server\.env.example server\.env`,
+> macOS/Linux: `cp server/.env.example server/.env`.
+
+### Manual setup (per app)
+
+```bash
+# backend
+cd server
+npm install
+npm run db:reset              # needs server/.env to exist first
+npm run dev                   # http://localhost:4000
+
+# frontend (separate terminal)
 cd client
 npm install
 npm run dev                   # http://localhost:5173 (proxies /api -> :4000)
